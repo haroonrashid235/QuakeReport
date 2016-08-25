@@ -21,6 +21,7 @@ import java.util.ArrayList;
  */
 public final class QueryUtils {
 
+
     /* LOG_TAG to identify log messages from this class */
     private static final String LOG_TAG = QueryUtils.class.getSimpleName();
 
@@ -47,6 +48,9 @@ public final class QueryUtils {
         // Perform a networking request
         try {
             jsonResponse = makeHTTPRequest(url);
+            if(jsonResponse == null){
+                return null;
+            }
         } catch (IOException e) {
             Log.e(LOG_TAG, "Error closing input stream", e);
         }
@@ -91,7 +95,7 @@ public final class QueryUtils {
         String jsonResponse = null;
 
         if (url == null) {
-            return jsonResponse;
+            return null;
         }
 
         InputStream inputStream = null;

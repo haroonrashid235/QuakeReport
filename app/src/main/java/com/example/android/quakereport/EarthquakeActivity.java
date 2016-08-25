@@ -17,21 +17,28 @@ package com.example.android.quakereport;
 
 import android.app.LoaderManager;
 import android.app.LoaderManager.LoaderCallbacks;
+import android.content.Context;
 import android.content.Intent;
 import android.content.Loader;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.example.android.quakereport.R.id.empty_state_text;
+import static com.example.android.quakereport.R.id.loading_spinner;
+
 public class EarthquakeActivity extends AppCompatActivity implements LoaderCallbacks<List<Earthquake>> {
 
-    public static final String LOG_TAG = EarthquakeActivity.class.getName();
     private static final int EARTHQUAKE_LOADER_ID = 1;
 
     /* URL to get JSON data from*/
@@ -39,21 +46,37 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderCallb
 
     private static EarthquakeAdapter mEarthquakeAdapter;
 
+    // TextView to handle Empty State case
+    private TextView mEmptyStateText;
+    private ProgressBar mLoadingSpinner;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.earthquake_activity);
 
+        // Find a reference to the {@link TextView} in the layout
+        mLoadingSpinner = (ProgressBar) findViewById(loading_spinner);
+
         // Find a reference to the {@link ListView} in the layout
         ListView earthquakeListView = (ListView) findViewById(R.id.list);
+
+        // Find a reference to the {@link TextView} in the layout
+        mEmptyStateText = (TextView) findViewById(empty_state_text);
+        if (earthquakeListView != null) {
+            earthquakeListView.setEmptyView(mEmptyStateText);
+        }
 
         // Create a new {@link EarthquakeAdapter} of earthquakes
         mEarthquakeAdapter = new EarthquakeAdapter(this, new ArrayList<Earthquake>());
 
         // Set the adapter on the {@link ListView}
         // so the list can be populated in the user interface
-        earthquakeListView.setAdapter(mEarthquakeAdapter);
+        if (earthquakeListView != null) {
+            earthquakeListView.setAdapter(mEarthquakeAdapter);
+        }
 
+        assert earthquakeListView != null;
         earthquakeListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -64,13 +87,26 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderCallb
             }
         });
 
-        // Get a reference to the LoaderManager, in order to interact with loaders.
-        LoaderManager loaderManager = getLoaderManager();
+        // Check for Internet Connection
+        ConnectivityManager connectivityManager =
+                (ConnectivityManager)this.getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        // Initialize the loader. Pass in the int ID constant defined above and pass in null for
-        // the bundle. Pass in this activity for the LoaderCallbacks parameter (which is valid
-        // because this activity implements the LoaderCallbacks interface).
-        loaderManager.initLoader(EARTHQUAKE_LOADER_ID, null, this);
+        NetworkInfo activeNetwork = connectivityManager.getActiveNetworkInfo();
+        boolean isConnected = activeNetwork != null &&
+                activeNetwork.isConnectedOrConnecting();
+
+        if(isConnected) {
+            // Get a reference to the LoaderManager, in order to interact with loaders.
+            LoaderManager loaderManager = getLoaderManager();
+
+            // Initialize the loader. Pass in the int ID constant defined above and pass in null for
+            // the bundle. Pass in this activity for the LoaderCallbacks parameter (which is valid
+            // because this activity implements the LoaderCallbacks interface).
+            loaderManager.initLoader(EARTHQUAKE_LOADER_ID, null, this);
+        }else{
+            mLoadingSpinner.setVisibility(View.GONE);
+            mEmptyStateText.setText("No or Bad Internet Connection.");
+        }
 
     }
 
@@ -96,12 +132,16 @@ public class EarthquakeActivity extends AppCompatActivity implements LoaderCallb
         // Clear the adapter of previous earthquake data
         mEarthquakeAdapter.clear();
 
+
         // If there is a valid list of {@link Earthquake}s, then add them to the adapter's
         // data set. This will trigger the ListView to update.
         if (data != null && !data.isEmpty()) {
             mEarthquakeAdapter.addAll(data);
-
         }
+
+        mLoadingSpinner.setVisibility(View.GONE);
+        mEmptyStateText.setText("No Earthquakes Found.");
+
     }
 
     /**
